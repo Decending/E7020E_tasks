@@ -35,8 +35,8 @@ use address::*;
 
 #[inline(always)]
 fn read_u32(addr: u32) -> u32 {
-    // unsafe { core::ptr::read_volatile(addr as *const _) }
-    core::ptr::read_volatile(addr as *const _)
+    unsafe { core::ptr::read_volatile(addr as *const _) }
+    // core::ptr::read_volatile(addr as *const _)
 }
 
 #[inline(always)]
@@ -110,6 +110,7 @@ const APP: () = {
 //
 //    ** My answer here **
 //    There are conditions, which if met, will have undefined behaviour.
+//    It's not that the function itself is always unsafe, but sometimes it can be.
 //
 //    Commit your answers (bare4_2)
 //
@@ -128,11 +129,16 @@ const APP: () = {
 //    Give an example in the above code, where reordering might make things go horribly wrong
 //    (hint, accessing a peripheral not being powered...)
 //
-//    ** your answer here **
+//    ** My answer here **
+//    I don't know about HORRIBLY wrong, but changing around the order in
+//    init will not show any errors, yet the led will not blink.
 //
 //    Without the non-reordering property of `write_volatile/read_volatile` could that happen in theory
 //    (argue from the point of data dependencies).
 //
-//    ** your answer here **
+//    ** My answer here **
+//    If we are working with interrupts there's no guarantee that things will pan out
+//    the way we imagined it, which could interfer with volatile read / writes if the tasks
+//    work with the same register.
 //
 //    Commit your answers (bare4_3)
