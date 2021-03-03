@@ -59,12 +59,14 @@ mod stm32f40x {
         #[inline(always)]
         pub fn modify(&self, offset: u8, width: u8, value: u32) {
             let mut my_mask = 0;
+            let mut new_value = self.read();
             let a = 2 as u32;
+
             for i in 0..width{
                 my_mask += a.pow(i as u32);
             }
-            let new_value = (value & my_mask) * a.pow(offset as u32);
-            //let new_value = my_mask;
+            new_value = new_value + (value & my_mask) * a.pow(offset as u32) - (new_value & (my_mask * a.pow(offset as u32)));
+            //let new_value = my_mask; //Test function
             &self.write(new_value);
             // your code here
         }
