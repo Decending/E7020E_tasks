@@ -58,6 +58,14 @@ mod stm32f40x {
     impl VolatileCell<u32> {
         #[inline(always)]
         pub fn modify(&self, offset: u8, width: u8, value: u32) {
+            let mut my_mask = 0;
+            let a = 2 as u32;
+            for i in 0..width{
+                my_mask += a.pow(i as u32);
+            }
+            let new_value = (value & my_mask) * a.pow(offset as u32);
+            //let new_value = my_mask;
+            &self.write(new_value);
             // your code here
         }
     }
@@ -177,7 +185,7 @@ const APP: () = {
         let r = gpioa.MODER.read() & !(0b11 << (5 * 2)); // read and mask
         gpioa.MODER.write(r | 0b01 << (5 * 2)); // set output mode
 
-        // test_modify();
+        test_modify();
 
         loop {
             // set PA5 high
