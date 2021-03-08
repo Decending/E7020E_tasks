@@ -327,12 +327,18 @@ const APP: () = {
 //
 //    ** My answer here **
 /*
-        => 0x0800024e <+14>:	bkpt	0x0000
-           0x08000250 <+16>:	adds	r0, #1
-           0x08000252 <+18>:	str	r0, [sp, #4]
-           0x08000254 <+20>:	bkpt	0x0000
-           0x08000256 <+22>:	ldr	r0, [sp, #4]
-           0x08000258 <+24>:	b.n	0x800024c <rtic_bare1::init+12>
+Dump of assembler code for function rtic_bare1::APP::main:
+   0x0800024a <+0>:	push	{r7, lr}
+   0x0800024c <+2>:	mov	r7, sp
+   0x0800024e <+4>:	movw	r0, #60688	; 0xed10
+=> 0x08000252 <+8>:	cpsid	i
+   0x08000254 <+10>:	movt	r0, #57344	; 0xe000
+   0x08000258 <+14>:	ldr	r1, [r0, #0]
+   0x0800025a <+16>:	orr.w	r1, r1, #2
+   0x0800025e <+20>:	str	r1, [r0, #0]
+   0x08000260 <+22>:	bl	0x8000240 <rtic_bare1::init>
+End of assembler dump.
+
 
 */
 //
