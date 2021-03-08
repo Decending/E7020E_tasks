@@ -384,17 +384,14 @@ End of assembler dump.
 //
 //    ** My answer here **
 /*
-Dump of assembler code for function rtic_bare1::APP::main:
-   0x0800024a <+0>:	push	{r7, lr}
-   0x0800024c <+2>:	mov	r7, sp
-   0x0800024e <+4>:	movw	r0, #60688	; 0xed10
-=> 0x08000252 <+8>:	cpsid	i
-   0x08000254 <+10>:	movt	r0, #57344	; 0xe000
-   0x08000258 <+14>:	ldr	r1, [r0, #0]
-   0x0800025a <+16>:	orr.w	r1, r1, #2
-   0x0800025e <+20>:	str	r1, [r0, #0]
-   0x08000260 <+22>:	bl	0x8000240 <rtic_bare1::init>
+Dump of assembler code for function rtic_bare1::init:
+   0x08000240 <+0>:	push	{r7, lr}
+   0x08000242 <+2>:	mov	r7, sp
+=> 0x08000244 <+4>:	bkpt	0x0000
+   0x08000246 <+6>:	bkpt	0x0000
+   0x08000248 <+8>:	b.n	0x8000244 <rtic_bare1::init+4>
 End of assembler dump.
+
 
 */
 //
@@ -402,7 +399,7 @@ End of assembler dump.
 //    What happened, and why is Rust + LLVM allowed to optimize out your code?
 //
 //    ** My answer here **
-//    In r0. Doesn't seem like much happened...
+//    It is not stored anywhere, as it is optimized out. Since x is not used, the rust compiler removed it.
 //
 //    Commit your answers (bare1_6)
 //
