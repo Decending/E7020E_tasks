@@ -310,7 +310,7 @@ const APP: () = {
 //    Do you see any way this code may end up in a panic?
 //
 //    ** My answer here **
-//    The program still has the possibility or inevitability of an overflow in it's current implementation.
+//    There is no reference to the panic handler, so this will not be able to generate a panic. I guess the default is to have a wrapping addition in release mode.
 //
 //    So clearly, the "semantics" (meaning) of the program has changed.
 //    This is on purpose, Rust adopts "unchecked" (wrapping) additions (and subtractions)
