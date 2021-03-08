@@ -402,7 +402,7 @@ End of assembler dump.
 //    What happened, and why is Rust + LLVM allowed to optimize out your code?
 //
 //    ** My answer here **
-//    On the stack pointer with an offset of 0. 
+//    In r0. Doesn't seem like much happened...
 //
 //    Commit your answers (bare1_6)
 //
