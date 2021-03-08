@@ -156,7 +156,7 @@ const APP: () = {
 //    Explain in your own words what this assembly line does.
 //
 //    ** My answer here **
-//    It'll load the registry sp with an immediate offset of 0 into r0. This should be our x.
+//    It'll load the sp with an immediate offset of 0 into r0. This should be our x.
 //
 //    In Cortex Registers (left) you can see the content of `r0`
 //
