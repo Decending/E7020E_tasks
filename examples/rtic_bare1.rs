@@ -256,7 +256,7 @@ const APP: () = {
 //            there is no "magic" here, just a compiler generating code...
 //
 //    ** My answer here **
-//    Unclear, as there is no 0x08000f28 ..  0x08000f38.
+//    We save the relevant information regarding the panic.
 //
 //    Commit your answer (bare1_3)
 //
