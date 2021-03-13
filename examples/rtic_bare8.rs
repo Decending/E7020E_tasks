@@ -11,7 +11,7 @@
 
 use panic_rtt_target as _;
 
-use nb::block;
+use stm32f4xx_hal::nb::block;
 
 use stm32f4xx_hal::{
     gpio::{gpioa::PA, Output, PushPull},
@@ -69,15 +69,20 @@ const APP: () = {
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
+        let mut received = 0;
+        let mut errors = 0;
 
         loop {
             match block!(rx.read()) {
                 Ok(byte) => {
-                    rprintln!("Ok {:?}", byte);
+                    //rprintln!("Ok {:?}", byte);
+                    received += 1;
+                    rprintln!("Received: {:?}", received);
                     tx.write(byte).unwrap();
                 }
                 Err(err) => {
-                    rprintln!("Error {:?}", err);
+                    //rprintln!("Error {:?}", err);
+                    rprintln!("Errors: {:?}", errors);
                 }
             }
         }
@@ -113,31 +118,40 @@ const APP: () = {
 //
 //    What do you receive in `moserial`?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    a
 //
 //    What do you receive in the RTT terminal?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    Ok 97
 //
 //    Try sending: "abcd" as a single sequence, don't send the quotation marks, just abcd.
 //
 //    What did you receive in `moserial`?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    abcd
 //
 //    What do you receive in the RTT terminal?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    Ok 97
+//    Ok 98
+//    Ok 99
+//    Ok 100
 //
 //    What do you believe to be the problem?
 //
 //    Hint: Look at the code in `idle` what does it do?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    There doesn't seem to be a problem...
 //
 //    Experiment a bit, what is the max length sequence you can receive without errors?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    I can send 16 letters, after that they simply don't show up but I don't get an error message...
 //
 //    Commit your answers (bare8_1)
 //
@@ -152,11 +166,13 @@ const APP: () = {
 //
 // 3. Experiment a bit, what is the max length sequence you can receive without errors?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    I can send 16 letters, but I don't get errors afterwards, they simply don't show up.
 //
 //    How did the added tracing/instrumentation affect the behavior?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    Not at all.
 //
 //    Commit your answer (bare8_3)
 //
@@ -168,7 +184,8 @@ const APP: () = {
 //
 //    Experiment a bit, what is the max length sequence you can receive without errors?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    It's still 16 letters, and it still refuses to produce any errors.
 //
 //    Commit your answer (bare8_4)
 //
