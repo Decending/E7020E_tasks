@@ -296,10 +296,10 @@ const APP: () = {
         // move mouse cursor horizontally (x-axis) while blinking LED
         if *counter < P / 2 {
             led.set_high().ok();
-            hid.write(&hid::report(100, 0));
+            hid.write(&hid::report(10, 0));
         } else {
             led.set_low().ok();
-            hid.write(&hid::report(-100, 0));
+            hid.write(&hid::report(-10, 0));
         }
     }
 

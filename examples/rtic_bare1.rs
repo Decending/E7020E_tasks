@@ -20,14 +20,14 @@ const APP: () = {
     fn init(_cx: init::Context) {
         let mut x = core::u32::MAX - 1;
         loop {
-            cortex_m::asm::bkpt();
-            x += x.wrapping_add(1);
-            cortex_m::asm::bkpt();
+            // cortex_m::asm::bkpt();
+            x += 1;
+            // cortex_m::asm::bkpt();
 
             // prevent optimization by read-volatile (unsafe)
-            /*unsafe {
+            unsafe {
                 core::ptr::read_volatile(&x);
-            }*/
+            }
         }
     }
 };
@@ -45,14 +45,11 @@ const APP: () = {
 //
 //    Paste the error message:
 //
-//    ** My answer here **
-//    panicked at 'attempt to add with overflow', examples/rtic_bare1.rs:24:13
+//    ** your answer here **
 //
 //    Explain in your own words why the code panic:ed.
 //
-//    ** My answer here **
-//    core::u32::MAX - 1 sets the value of x to the maximum value a 32 unsigned bit can hold - 1 and
-//    then starts a loop with an addition of 1 to x, that's a recipe for overflow.
+//    ** your answer here **
 //
 //    Commit your answer (bare1_1)
 //
@@ -68,29 +65,11 @@ const APP: () = {
 //
 //    Paste the backtrace:
 //
-//    ** My answer here **
-/*
-    #0  lib::__bkpt () at asm/lib.rs:49
-    #1  0x0800104e in cortex_m::asm::bkpt () at /home/decending/.cargo/registry/src/github.com-1ecc6299db9ec823/cortex-m-0.7.1/src/asm.rs:15
-    #2  rust_begin_unwind (info=0x2000fed8) at /home/decending/.cargo/registry/src/github.com-1ecc6299db9ec823/panic-semihosting-0.5.6/src/lib.rs:92
-    #3  0x0800039a in core::panicking::panic_fmt () at /rustc/cb75ad5db02783e8b0222fee363c5f63f7e2cf5b//library/core/src/panicking.rs:92
-    #4  0x08000374 in core::panicking::panic () at /rustc/cb75ad5db02783e8b0222fee363c5f63f7e2cf5b//library/core/src/panicking.rs:50
-    #5  0x08000ebe in rtic_bare1::init (_cx=...) at /home/decending/Desktop/e7020e_2021/examples/rtic_bare1.rs:24
-    #6  0x08000f08 in rtic_bare1::APP::main () at /home/decending/Desktop/e7020e_2021/examples/rtic_bare1.rs:15
-
-*/
+//    ** your answer here
 //
 //    Explain in your own words the chain of calls.
 //
-//    ** My answer here **
-//    This will run from the "bottom up":
-//    0# We enter a function with a breakpoint
-//    1# Calling function for breakpoint
-//    2# We unwind to catch the panic
-//    3# We continue to handle the panic
-//    4# We start to panic
-//    5# We start the init task.
-//    6# We call the APP::main task, 
+//    ** your answer here
 //
 //    Commit your answer (bare1_2)
 //
@@ -103,14 +82,11 @@ const APP: () = {
 //
 //    What is the value of `x`?
 //
-//    ** My answer here **
-//    x = 4294967294;
+//    ** your answer here **
 //
 //    Explain in your own words where this value comes from.
 //
-//    ** My answer here **
-//    This is the value of a 32-bit unsigned integer with the form:
-//    11111111111111111111111111111110, which is core::u32::MAX - 1.
+//    ** your answer here **
 //
 //    Now continue the program, since you are in a loop
 //    the program will halt again at line 24.
@@ -119,10 +95,7 @@ const APP: () = {
 //
 //    Explain in your own words why `x` now has this value.
 //
-//    ** My answer here **
-//    x = 4294967295;
-//    4294967294 + 1 = 4294967295
-//    This is what the loop is meant to do, so nothing strange here.
+//    ** your answer here **
 //
 //    Now continue again.
 //
@@ -136,9 +109,7 @@ const APP: () = {
 //
 //    Explain in your own words why a panic makes sense at this point.
 //
-//    ** My answer here **
-//    Since we're not using any sort of wrapping the new number, which is 4294967296 can't be contained
-//    in a u32 datastructure, so this becomes an undefined behaviour and hence the code panics.
+//    ** your answer here **
 //
 //    Commit your answer (bare1_3)
 //
@@ -155,15 +126,13 @@ const APP: () = {
 //
 //    Explain in your own words what this assembly line does.
 //
-//    ** My answer here **
-//    It'll load the sp with an immediate offset of 0 into r0. This should be our x.
+//    ** your answer here **
 //
 //    In Cortex Registers (left) you can see the content of `r0`
 //
 //    What value do you observe?
 //
-//    ** My answer here **
-//    -2 = 0xfffffffe.
+//    ** your answer here **
 //
 //    You can also get the register info from GDB directly.
 //
@@ -181,8 +150,7 @@ const APP: () = {
 //
 //    Explain in your own words what is happening here.
 //
-//    ** My answer here **
-//    We will add r0 and the immidate value 1 together (x + 1)
+//    ** your answer here **
 //
 //    We move to the next assembly instruction:
 //
@@ -191,8 +159,7 @@ const APP: () = {
 //
 //    What is the reported value for `r0`
 //
-//    ** My answer here **
-//    0xffffffff = -1
+//    ** your answer here **
 //
 //    So far so good.
 //
@@ -223,8 +190,7 @@ const APP: () = {
 //
 //    What does BCS do?
 //
-//    ** My answer here **
-//    It'll check for the carry flag and if it is set the instruction will jump to the provided address.
+//    ** your answer here **
 //
 //    Now let's see what happens.
 //
@@ -238,8 +204,7 @@ const APP: () = {
 //
 //    Explain in your own words where we are heading.
 //
-//    ** My answer here **
-//    We are heading into the panicking system.
+//    ** your answer here **
 //
 //    To validate that your answer, let's let the program continue
 //
@@ -255,10 +220,9 @@ const APP: () = {
 //    Hint 3, the code is generated by the Rust compiler to produce the error message.
 //            there is no "magic" here, just a compiler generating code...
 //
-//    ** My answer here **
-//    We save the relevant information regarding the panic.
+//    ** your answer here **
 //
-//    Commit your answer (bare1_3)
+//    Commit your answer (bare1_4)
 //
 // 5. Now we can remove the break point (click the `Remove All Breakpoints`),
 //    and instead uncomment the two breakpoint instructions (on lines 23 and 25).
@@ -269,7 +233,7 @@ const APP: () = {
 //
 //    The disassembly should look like this:
 //
-//Release
+//
 //       0x08000f18 <+20>:	bl	0x800103e <lib::__bkpt>
 //    => 0x08000f1c <+24>:	ldr	r0, [sp, #0]
 //       0x08000f1e <+26>:	adds	r0, #1
@@ -309,8 +273,7 @@ const APP: () = {
 //
 //    Do you see any way this code may end up in a panic?
 //
-//    ** My answer here **
-//    There is no reference to the panic handler, so this will not be able to generate a panic. I guess the default is to have a wrapping addition in release mode.
+//    ** your answer here **
 //
 //    So clearly, the "semantics" (meaning) of the program has changed.
 //    This is on purpose, Rust adopts "unchecked" (wrapping) additions (and subtractions)
@@ -325,34 +288,16 @@ const APP: () = {
 //
 //    Paste the generated assembly:
 //
-//    ** My answer here **
-/*
-
-Dump of assembler code for function rtic_bare1::APP::main:
-   0x0800025a <+0>:	push	{r7, lr}
-   0x0800025c <+2>:	mov	r7, sp
-   0x0800025e <+4>:	movw	r0, #60688	; 0xed10
-=> 0x08000262 <+8>:	cpsid	i
-   0x08000264 <+10>:	movt	r0, #57344	; 0xe000
-   0x08000268 <+14>:	ldr	r1, [r0, #0]
-   0x0800026a <+16>:	orr.w	r1, r1, #2
-   0x0800026e <+20>:	str	r1, [r0, #0]
-   0x08000270 <+22>:	bl	0x8000240 <rtic_bare1::init>
-End of assembler dump.
-
-*/
+//    ** your answer here **
 //
 //    Can this code generate a panic?
 //
-//    ** My answer here **
-//    No, there is no reference to the panic handler.
+//    ** your answer here **
 //
 //    Is there now any reference to the panic handler?
 //    If not, why is that the case?
 //
-//    ** My answer here **
-//    The reference to the panic handler is not present anymore, which indicates that the
-//    compiler have found the code to be unable to generate a panic.
+//    ** your answer here **
 //
 //    commit your answers (bare1_5)
 //
@@ -382,24 +327,12 @@ End of assembler dump.
 //
 //    Dump the generated assembly.
 //
-//    ** My answer here **
-/*
-Dump of assembler code for function rtic_bare1::init:
-   0x08000240 <+0>:	push	{r7, lr}
-   0x08000242 <+2>:	mov	r7, sp
-=> 0x08000244 <+4>:	bkpt	0x0000
-   0x08000246 <+6>:	bkpt	0x0000
-   0x08000248 <+8>:	b.n	0x8000244 <rtic_bare1::init+4>
-End of assembler dump.
-
-
-*/
+//    ** your answer here **
 //
 //    Where is the local variable stored?
 //    What happened, and why is Rust + LLVM allowed to optimize out your code?
 //
-//    ** My answer here **
-//    It is not stored anywhere, as it is optimized out. Since x is not used, the rust compiler removed it.
+//    ** your answer here **
 //
 //    Commit your answers (bare1_6)
 //

@@ -23,12 +23,12 @@ const APP: () = {
 
         let start = Instant::now();
         wait(1_000_000);
-        let end = start.elapsed();
+        let end = Instant::now();
 
         // notice all printing outside of the section to measure!
         hprintln!("Start {:?}", start).ok();
-        hprintln!("End {:?}", end.as_cycles()).ok();
-        hprintln!("Diff {:?}", (end.as_cycles()) ).ok();
+        hprintln!("End {:?}", end).ok();
+        // hprintln!("Diff {:?}", (end - start) ).ok();
     }
 };
 
@@ -62,9 +62,7 @@ fn wait(i: u32) {
 //
 //    What is the output in the Adapter Output console?
 //
-//    ** My answer here **
-//    Start Instant(2158334454)
-//    End Instant(2162334471)
+//    ** your answer here **
 //
 //    As you see line 31 is commented out (we never print the difference).
 //
@@ -78,10 +76,7 @@ fn wait(i: u32) {
 //
 //    What is now the output in the Adapter Output console?
 //
-//    ** My answer here **
-//    Start Instant(3665593903)
-//    End Instant(3669593919)
-//    Diff 4000016
+//    ** your answer here **
 //
 //    Commit your answers (bare3_1)
 //
@@ -91,11 +86,7 @@ fn wait(i: u32) {
 //
 //    What is now the output in the Adapter Output console?
 //
-//    ** My answer here **
-//    (Isn't this just the same exercise as 1?)
-//    Start Instant(3665593903)
-//    End Instant(3669593919)
-//    Diff 4000016
+//    ** your answer here **
 //
 //    Commit your answers (bare3_2)
 //
@@ -104,10 +95,7 @@ fn wait(i: u32) {
 //
 //    What is now the output in the Adapter Output console?
 //
-//    ** My answer here **
-//    Start Instant(1120238038)
-//    End 4000016
-//    Diff 4000016
+//    ** your answer here **
 //
 //    Commit your answers (bare3_3)
 //

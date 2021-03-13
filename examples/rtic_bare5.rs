@@ -58,16 +58,6 @@ mod stm32f40x {
     impl VolatileCell<u32> {
         #[inline(always)]
         pub fn modify(&self, offset: u8, width: u8, value: u32) {
-            let mut my_mask = 0;
-            let mut new_value = self.read();
-            let a = 2 as u32;
-
-            for i in 0..width{
-                my_mask += a.pow(i as u32);
-            }
-            new_value = new_value + (value & my_mask) * a.pow(offset as u32) - (new_value & (my_mask * a.pow(offset as u32)));
-            //let new_value = my_mask; //Test function
-            &self.write(new_value);
             // your code here
         }
     }
@@ -187,24 +177,24 @@ const APP: () = {
         let r = gpioa.MODER.read() & !(0b11 << (5 * 2)); // read and mask
         gpioa.MODER.write(r | 0b01 << (5 * 2)); // set output mode
 
-        test_modify();
+        // test_modify();
 
         loop {
             // set PA5 high
-            // gpioa.BSRRH.write(1 << 5); // set bit, output hight (turn on led)
+            gpioa.BSRRH.write(1 << 5); // set bit, output hight (turn on led)
 
             // alternatively to set the bit high we can
             // read the value, or with PA5 (bit 5) and write back
-            gpioa.ODR.write(gpioa.ODR.read() | (1 << 5));
+            // gpioa.ODR.write(gpioa.ODR.read() | (1 << 5));
 
             wait(10_000);
 
             // set PA5 low
-            // gpioa.BSRRL.write(1 << 5); // clear bit, output low (turn off led)
+            gpioa.BSRRL.write(1 << 5); // clear bit, output low (turn off led)
 
             // alternatively to clear the bit we can
             // read the value, mask out PA5 (bit 5) and write back
-            gpioa.ODR.write(gpioa.ODR.read() & !(1 << 5));
+            // gpioa.ODR.write(gpioa.ODR.read() & !(1 << 5));
             wait(10_000);
         }
     }

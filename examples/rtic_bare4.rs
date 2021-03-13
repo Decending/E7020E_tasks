@@ -83,9 +83,7 @@ const APP: () = {
 //
 // 1.  Did you enjoy the blinking?
 //
-//    ** My answer here **
-//    It was annoying in the corner of my vision and once I noticed it
-//    I couldn't unnotice it.
+//    ** your answer here **
 //
 //    Now lookup the data-sheets, and read each section referred,
 //    6.3.11, 8.4.1, 8.4.7
@@ -102,15 +100,12 @@ const APP: () = {
 //
 //    What was the error message and explain why.
 //
-//    ** My answer here **
-//    We're trying to use unsafe code outside of an unsafe bracket.
+//    ** your answer here **
 //
 //    Digging a bit deeper, why do you think `read_volatile` is declared `unsafe`.
 //    (https://doc.rust-lang.org/core/ptr/fn.read_volatile.html, for some food for thought )
 //
-//    ** My answer here **
-//    There are conditions, which if met, will have undefined behaviour.
-//    It's not that the function itself is always unsafe, but sometimes it can be.
+//    ** your answer here **
 //
 //    Commit your answers (bare4_2)
 //
@@ -123,22 +118,16 @@ const APP: () = {
 //
 //    Why is it important that ordering of volatile operations are ensured by the compiler?
 //
-//    ** My answer here **
-//    The volatile operations might have different results between accesses.
+//    ** your answer here **
 //
 //    Give an example in the above code, where reordering might make things go horribly wrong
 //    (hint, accessing a peripheral not being powered...)
 //
-//    ** My answer here **
-//    I don't know about HORRIBLY wrong, but changing around the order in
-//    init will not show any errors, yet the led will not blink.
+//    ** your answer here **
 //
 //    Without the non-reordering property of `write_volatile/read_volatile` could that happen in theory
 //    (argue from the point of data dependencies).
 //
-//    ** My answer here **
-//    If we are working with interrupts there's no guarantee that things will pan out
-//    the way we imagined it, which could interfer with volatile read / writes if the tasks
-//    work with the same register.
+//    ** your answer here **
 //
 //    Commit your answers (bare4_3)
