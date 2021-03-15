@@ -17,6 +17,7 @@ use stm32f4xx_hal::{
 
 use rtic::app;
 use rtt_target::{rprintln, rtt_init_print};
+use stm32f4xx_hal::nb::block;
 
 #[app(device = stm32f4xx_hal::stm32, peripherals = true)]
 const APP: () = {
@@ -24,6 +25,8 @@ const APP: () = {
         // Late resources
         TX: Tx<USART2>,
         RX: Rx<USART2>,
+        Errors: u16,
+        Received: u16,
     }
 
     // init runs in an interrupt free section
@@ -43,6 +46,9 @@ const APP: () = {
 
         let tx = gpioa.pa2.into_alternate_af7();
         let rx = gpioa.pa3.into_alternate_af7();
+        
+        let mut received = 0;
+        let mut errors = 0;
 
         let mut serial = Serial::usart2(
             device.USART2,
@@ -59,7 +65,7 @@ const APP: () = {
         let (tx, rx) = serial.split();
 
         // Late resources
-        init::LateResources { TX: tx, RX: rx }
+        init::LateResources { TX: tx, RX: rx, Errors: errors, Received: received }
     }
 
     // idle may be interrupted by other interrupts/tasks in the system
@@ -71,19 +77,34 @@ const APP: () = {
     }
 
     // capacity sets the size of the input buffer (# outstanding messages)
-    #[task(resources = [TX], priority = 1, capacity = 128)]
+    #[task(resources = [TX], priority = 1, capacity = 126)]
     fn rx(cx: rx::Context, data: u8) {
         let tx = cx.resources.TX;
         tx.write(data).unwrap();
-        rprintln!("data {}", data);
+        //rprintln!("data {}", data);
     }
 
     // Task bound to the USART2 interrupt.
-    #[task(binds = USART2,  priority = 2, resources = [RX], spawn = [rx])]
+    #[task(binds = USART2,  priority = 2, resources = [RX, Received, Errors], spawn = [rx])]
     fn usart2(cx: usart2::Context) {
         let rx = cx.resources.RX;
-        let data = rx.read().unwrap();
-        cx.spawn.rx(data).unwrap();
+        let mut received = cx.resources.Received;
+        let mut errors = cx.resources.Errors;
+        //let data = rx.read().unwrap();
+        //cx.spawn.rx(data).unwrap();
+        match block!(rx.read()) {    // Move the read into block, saves a few cycles
+            Ok(byte) => {    // Obligatory line, byte seems to be a standard
+                //rprintln!("Ok {:?}", byte);
+                *received += 1;
+                //rprintln!("Received: {:?}", received);
+                cx.spawn.rx(byte).unwrap();    // Write to the transceiver
+            }
+            Err(err) => {
+                //rprintln!("Error {:?}", err);
+                *errors += 1;
+                rprintln!("Errors: {:?}", errors);
+            }
+        }
     }
 
     extern "C" {
@@ -148,7 +169,8 @@ const APP: () = {
 //
 //    Were you able to crash it?
 //
-//    ** your answer here **
+//    ** My answer here **
+//    No, we were not able to "crash" it
 //
 //    Notice, the input tracing in `moserial` seems broken, and may loose data.
 //    So don't be alarmed if data is missing, its a GUI tool after all.
@@ -193,6 +215,13 @@ const APP: () = {
 //    To make errors easier to produce, reduce the capacity.
 //
 //    Once finished, comment your code.
+//
+//    ** My answer here **
+//    By copying the received / error function from bare8 we get the functionality which was requested,
+//    but we produce a few errors during manual stress tests (at around 1 error per 150 characters).
+//       To get rid of these errors we simply reduce the program to only "report" on errors and not
+//    received characters.
+//       To produce the errors agin, simply uncomment the "reporting" of data and received.
 //
 //    Commit your code (bare9_2)
 //

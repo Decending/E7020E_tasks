@@ -82,6 +82,7 @@ const APP: () = {
                 }
                 Err(err) => {
                     //rprintln!("Error {:?}", err);
+                    errors += errors;
                     rprintln!("Errors: {:?}", errors);
                 }
             }
