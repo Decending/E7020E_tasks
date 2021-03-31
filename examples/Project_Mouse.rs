@@ -9,7 +9,7 @@
 #![no_std]
 use embedded_hal::spi::MODE_3;
 use panic_rtt_target as _;
-use hid::HIDClass;
+use rtt_target as _;
 use cortex_m::{asm::delay, peripheral::DWT};
 use embedded_hal::digital::v2::{OutputPin, ToggleableOutputPin};
 use stm32f4xx_hal::{
@@ -17,8 +17,42 @@ use stm32f4xx_hal::{
     otg_fs::{UsbBus, UsbBusType, USB},
     prelude::*,
 };
-use usb_device::bus;
-use usb_device::prelude::*;
+use usb_device::{bus::UsbBusAllocator, prelude::*};
+use usbd_hid::{
+    descriptor::{generator_prelude::*, MouseReport},
+    hid_class::HIDClass
+};
+use app::{DwtDelay, pmw3389::{self, Register}, pmw3389e};
+use usbd_hid::descriptor::SerializedDescriptor;
+use usbd_hid::descriptor::AsInputReport;
+use usbd_hid::descriptor::gen_hid_descriptor;
+#[gen_hid_descriptor(
+    (collection = APPLICATION, usage_page = GENERIC_DESKTOP, usage = MOUSE) = {
+        (collection = PHYSICAL, usage = POINTER) = {
+            (usage_page = BUTTON, usage_min = 0x01, usage_max = 0x05) = {
+                #[packed_bits 1] #[item_settings data,variable,absolute] buttons=input;
+            };
+            (usage_page = GENERIC_DESKTOP,) = {
+                (usage = X,) = {
+                    #[item_settings data,variable,relative] x=input;
+                };
+                (usage = Y,) = {
+                    #[item_settings data,variable,relative] y=input;
+                };
+                (usage = WHEEL,) = {
+                    #[item_settings data,variable,relative] wheel=input;
+                };
+            };
+        };
+    }
+)]
+pub struct NuttaliReport {
+    pub buttons: u8,
+    pub x: i8,
+    pub y: i8,
+    pub wheel: i8, // Scroll down (negative) or up (positive) this many units
+}
+
 use rtic::cyccnt::{Instant, U32Ext as _};
 use stm32f4xx_hal::{
     dwt::Dwt,
@@ -33,191 +67,6 @@ use stm32f4xx_hal::{
     spi::Spi,
     stm32,
 };
-
-use app::{
-    pmw3389::{self, Register},
-    DwtDelay,
-};
-
-#[allow(unused)]
-pub mod hid {
-    use usb_device::class_prelude::*;
-    use usb_device::Result;
-
-    pub const USB_CLASS_HID: u8 = 0x03;
-
-    const USB_SUBCLASS_NONE: u8 = 0x00;
-    const USB_SUBCLASS_BOOT: u8 = 0x01;
-
-    const USB_INTERFACE_NONE: u8 = 0x00;
-    const USB_INTERFACE_KEYBOARD: u8 = 0x01;
-    const USB_INTERFACE_MOUSE: u8 = 0x02;
-
-    const REQ_GET_REPORT: u8 = 0x01;
-    const REQ_GET_IDLE: u8 = 0x02;
-    const REQ_GET_PROTOCOL: u8 = 0x03;
-    const REQ_SET_REPORT: u8 = 0x09;
-    const REQ_SET_IDLE: u8 = 0x0a;
-    const REQ_SET_PROTOCOL: u8 = 0x0b;
-
-    // https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/mouse-collection-report-descriptor
-    const REPORT_DESCR: &[u8] = &[
-        0x05, 0x01, // USAGE_PAGE (Generic Desktop)
-        0x09, 0x02, // USAGE (Mouse)
-        0xa1, 0x01, // COLLECTION (Application)
-        0x09, 0x01, //   USAGE (Pointer)
-        0xa1, 0x00, //   COLLECTION (Physical)
-        0x05, 0x09, //     USAGE_PAGE (Button)
-        0x19, 0x01, //     USAGE_MINIMUM (Button 1)
-        0x29, 0x03, //     USAGE_MAXIMUM (Button 3)
-        0x15, 0x00, //     LOGICAL_MINIMUM (0)
-        0x25, 0x01, //     LOGICAL_MAXIMUM (1)
-        0x95, 0x03, //     REPORT_COUNT (3)
-        0x75, 0x01, //     REPORT_SIZE (1)
-        0x81, 0x02, //     INPUT (Data,Var,Abs)
-        0x95, 0x01, //     REPORT_COUNT (1)
-        0x75, 0x05, //     REPORT_SIZE (5)
-        0x81, 0x03, //     INPUT (Cnst,Var,Abs)
-        0x05, 0x01, //     USAGE_PAGE (Generic Desktop)
-        0x09, 0x30, //     USAGE (X)
-        0x09, 0x31, //     USAGE (Y)
-        0x15, 0x81, //     LOGICAL_MINIMUM (-127)
-        0x25, 0x7f, //     LOGICAL_MAXIMUM (127)
-        0x75, 0x08, //     REPORT_SIZE (8)
-        0x95, 0x02, //     REPORT_COUNT (2)
-        0x81, 0x06, //     INPUT (Data,Var,Rel)
-        0xc0, //   END_COLLECTION
-        0xc0, // END_COLLECTION
-    ];
-
-    pub fn report(x: i8, y: i8) -> [u8; 3] {
-        [
-            0x00,    // button: none
-            x as u8, // x-axis
-            y as u8, // y-axis
-        ]
-    }
-
-    pub struct HIDClass<'a, B: UsbBus> {
-        report_if: InterfaceNumber,
-        report_ep: EndpointIn<'a, B>,
-    }
-
-    impl<B: UsbBus> HIDClass<'_, B> {
-        /// Creates a new HIDClass with the provided UsbBus and max_packet_size in bytes. For
-        /// full-speed devices, max_packet_size has to be one of 8, 16, 32 or 64.
-        pub fn new(alloc: &UsbBusAllocator<B>) -> HIDClass<'_, B> {
-            HIDClass {
-                report_if: alloc.interface(),
-                report_ep: alloc.interrupt(8, 10),
-            }
-        }
-
-        pub fn write(&mut self, data: &[u8]) {
-            self.report_ep.write(data).ok();
-        }
-    }
-
-    impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
-        fn get_configuration_descriptors(&self, writer: &mut DescriptorWriter) -> Result<()> {
-            writer.interface(
-                self.report_if,
-                USB_CLASS_HID,
-                USB_SUBCLASS_NONE,
-                USB_INTERFACE_MOUSE,
-            )?;
-
-            let descr_len: u16 = REPORT_DESCR.len() as u16;
-            writer.write(
-                0x21,
-                &[
-                    0x01,                   // bcdHID
-                    0x01,                   // bcdHID
-                    0x00,                   // bCountryCode
-                    0x01,                   // bNumDescriptors
-                    0x22,                   // bDescriptorType
-                    descr_len as u8,        // wDescriptorLength
-                    (descr_len >> 8) as u8, // wDescriptorLength
-                ],
-            )?;
-
-            writer.endpoint(&self.report_ep)?;
-
-            Ok(())
-        }
-
-        fn control_in(&mut self, xfer: ControlIn<B>) {
-            let req = xfer.request();
-
-            if req.request_type == control::RequestType::Standard {
-                match (req.recipient, req.request) {
-                    (control::Recipient::Interface, control::Request::GET_DESCRIPTOR) => {
-                        let (dtype, _index) = req.descriptor_type_index();
-                        if dtype == 0x21 {
-                            // HID descriptor
-                            cortex_m::asm::bkpt();
-                            let descr_len: u16 = REPORT_DESCR.len() as u16;
-
-                            // HID descriptor
-                            let descr = &[
-                                0x09,                   // length
-                                0x21,                   // descriptor type
-                                0x01,                   // bcdHID
-                                0x01,                   // bcdHID
-                                0x00,                   // bCountryCode
-                                0x01,                   // bNumDescriptors
-                                0x22,                   // bDescriptorType
-                                descr_len as u8,        // wDescriptorLength
-                                (descr_len >> 8) as u8, // wDescriptorLength
-                            ];
-
-                            xfer.accept_with(descr).ok();
-                            return;
-                        } else if dtype == 0x22 {
-                            // Report descriptor
-                            xfer.accept_with(REPORT_DESCR).ok();
-                            return;
-                        }
-                    }
-                    _ => {
-                        return;
-                    }
-                };
-            }
-
-            if !(req.request_type == control::RequestType::Class
-                && req.recipient == control::Recipient::Interface
-                && req.index == u8::from(self.report_if) as u16)
-            {
-                return;
-            }
-
-            match req.request {
-                REQ_GET_REPORT => {
-                    // USB host requests for report
-                    // I'm not sure what should we do here, so just send empty report
-                    xfer.accept_with(&report(0, 0)).ok();
-                }
-                _ => {
-                    xfer.reject().ok();
-                }
-            }
-        }
-
-        fn control_out(&mut self, xfer: ControlOut<B>) {
-            let req = xfer.request();
-
-            if !(req.request_type == control::RequestType::Class
-                && req.recipient == control::Recipient::Interface
-                && req.index == u8::from(self.report_if) as u16)
-            {
-                return;
-            }
-
-            xfer.reject().ok();
-        }
-    }
-}
 
 type PMW3389T = pmw3389::Pmw3389<
     Spi<
@@ -242,7 +91,7 @@ use stm32f4xx_hal::{
     prelude::*,
 };
 
-const OFFSET: u32 = 8_000_000;
+const OFFSET: u32 = 1_000_000;
 
 #[rtic::app(device = stm32f4xx_hal::stm32, monotonic = rtic::cyccnt::CYCCNT, peripherals = true)]
 const APP: () = {
@@ -260,10 +109,12 @@ const APP: () = {
         Scale_modify: bool,
     }
     
-    #[init(schedule = [toggle, toggle_speed])]
+    #[init(schedule = [toggle_speed])]
     fn init(cx: init::Context) -> init::LateResources {
-        static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
+        static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
         static mut EP_MEMORY: [u32; 1024] = [0; 1024];
+        rtt_init_print!();
+        rprintln!("init");
         let mut core = cx.core;
         core.DCB.enable_trace();
         DWT::unlock();
@@ -284,33 +135,33 @@ const APP: () = {
         let led = gpioa.pa5.into_push_pull_output();
 
         // Pull the D+ pin down to send a RESET condition to the USB bus.
-        let mut usb_dp = gpioa.pa12.into_push_pull_output();
-        usb_dp.set_low().ok();
-        delay(clocks.sysclk().0 / 100);
-        let usb_dp = usb_dp.into_floating_input();
+        //let mut usb_dp = gpioa.pa12.into_push_pull_output();
+        //usb_dp.set_low().ok();
+        //delay(clocks.sysclk().0 / 100);
+        //let usb_dp = usb_dp.into_floating_input();
+        //cortex_m::asm::delay(100);
 
-        let usb_dm = gpioa.pa11;
+        //let usb_dm = gpioa.pa11;
 
         let usb = USB {
             usb_global: cx.device.OTG_FS_GLOBAL,
             usb_device: cx.device.OTG_FS_DEVICE,
             usb_pwrclk: cx.device.OTG_FS_PWRCLK,
-            pin_dm: usb_dm.into_alternate_af10(),
-            pin_dp: usb_dp.into_alternate_af10(),
+            pin_dm: gpioa.pa11.into_alternate_af10(),
+            pin_dp: gpioa.pa12.into_alternate_af10(),
         };
-
-        *USB_BUS = Some(UsbBus::new(usb, EP_MEMORY));
-
-        let hid = HIDClass::new(USB_BUS.as_ref().unwrap());
+	
+        USB_BUS.replace(UsbBus::new(usb, EP_MEMORY));
+        let hid = HIDClass::new(USB_BUS.as_ref().unwrap(), MouseReport::desc(), 1);
 
 
         let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
-            .manufacturer("Fake company")
-            .product("mouse")
-            .serial_number("TEST")
+            .manufacturer("Mouse company")
+            .product("Mouse")
+            .serial_number("Serial_Number")
             .device_class(0)
             .build();
-        
+
         let gpiob = cx.device.GPIOB.split();
         let gpioc = cx.device.GPIOC.split();
 
@@ -332,6 +183,11 @@ const APP: () = {
         
         let scaler = 1.0;
         let scale_modify = false;
+
+        let now = cx.start;
+            
+        cx.schedule.toggle_speed(now + ((OFFSET)).cycles()).unwrap();
+        //cx.schedule.toggle(now + ((OFFSET)).cycles()).unwrap();
 	
         // pass on late resources
         init::LateResources {
@@ -346,7 +202,7 @@ const APP: () = {
             Counter: 0,
             Scale_modify: scale_modify,
             pmw3389,
-            }
+            }      
     }
 
     #[idle]
@@ -395,42 +251,48 @@ const APP: () = {
         fn EXTI0();
     }
     
-    #[task(resources = [led, btn, Scaler], priority = 2, schedule = [toggle])]
+    #[task(binds=OTG_FS, resources = [led, btn, Scaler, hid, pmw3389, usb_dev], priority = 2)]
     fn toggle(cx: toggle::Context) {
         let myScaler = cx.resources.Scaler;
-        if cx.resources.btn.is_high().unwrap() {
+        let hid = cx.resources.hid;
+        let btn = cx.resources.btn;
+        let usb_dev = cx.resources.usb_dev;
+        let mut POS_X: i64 = 0;
+        let mut POS_Y: i64 = 0;
+        if btn.is_high().unwrap() {
             //if cx.resources.led.is_low().unwrap(){
                _toggleable_generic(cx.resources.led); //Utilize the generic toggle function, toggle variable no longer needed
                //}
         }
         else{
-            if cx.resources.led.is_low().unwrap() && cx.resources.btn.is_low().unwrap() {
+            if cx.resources.led.is_low().unwrap() && btn.is_low().unwrap() {
                 _toggleable_generic(cx.resources.led);
             }
         }
-        cx.schedule.toggle(cx.scheduled + ((*myScaler as u32 * OFFSET)).cycles()).unwrap();
+        
+        let (x, y) = cx.resources.pmw3389.read_status().unwrap();
+        POS_X += x as i64;
+        POS_Y += y as i64;
+        let report = MouseReport {
+            buttons: (btn.is_low().unwrap() as u8),
+            x: POS_X as i8,
+            y: POS_Y as i8,
+            wheel: 0,
+        };
+        //rprintln!("btn: {:?}", btn.is_low().unwrap());
+        hid.push_input(&report).ok();
+        //rprintln!("Report {:?}", report);
+        
+        if usb_dev.poll(&mut [hid]) {
+            return;
+        }
+   
+        
+        //cx.schedule.toggle(cx.scheduled + ((*myScaler as u32 * OFFSET)).cycles()).unwrap();
     }
 
     extern "C" {
         fn EXTI1();
-    }
-    
-    #[task(schedule = [on_tick], resources = [Counter, hid])]
-    fn on_tick(mut cx: on_tick::Context) {
-        cx.schedule.on_tick(Instant::now() + OFFSET.cycles()).ok();
-
-        let counter: &mut u8 = &mut cx.resources.Counter;
-        let hid = &mut cx.resources.hid;
-
-        const P: u8 = 2;
-        *counter = (*counter + 1) % P;
-
-        // move mouse cursor horizontally (x-axis) while blinking LED
-        if *counter < P / 2 {
-            hid.write(&hid::report(10, 0));
-        } else {
-            hid.write(&hid::report(-10, 0));
-        }
     }
     
     extern "C" {
