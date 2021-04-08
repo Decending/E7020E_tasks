@@ -30,7 +30,7 @@ use usbd_hid::descriptor::gen_hid_descriptor;
     (collection = APPLICATION, usage_page = GENERIC_DESKTOP, usage = MOUSE) = {
         (collection = PHYSICAL, usage = POINTER) = {
             (usage_page = BUTTON, usage_min = 0x01, usage_max = 0x05) = {
-                #[packed_bits 1] #[item_settings data,variable,absolute] buttons=input;
+                #[packed_bits 5] #[item_settings data,variable,absolute] buttons=input;
             };
             (usage_page = GENERIC_DESKTOP,) = {
                 (usage = X,) = {
@@ -46,7 +46,7 @@ use usbd_hid::descriptor::gen_hid_descriptor;
         };
     }
 )]
-pub struct NuttaliReport {
+pub struct PMouseReport {
     pub buttons: u8,
     pub x: i8,
     pub y: i8,
@@ -85,7 +85,7 @@ use stm32f4xx_hal::nb::block;
 
 use stm32f4xx_hal::{
     gpio::{gpioa::PA9},
-    gpio::{gpioa::PA1, gpioa::PA2, gpioa::PA3, Input, PullUp},
+    gpio::{gpioa::PA0, gpioa::PA1, gpioa::PA2, gpioa::PA3, gpioa::PA4, gpioa::PA5, gpioa::PA6, Input, PullUp},
     //gpio::{gpioc::PC10},
     //gpio::{gpioc::PC12},
     prelude::*,
@@ -101,7 +101,11 @@ const APP: () = {
         usb_dev: UsbDevice<'static, UsbBusType>,
         pmw3389: PMW3389T,
         led: PA9<Output<PushPull>>,
-        btn: PA1<Input<PullUp>>,
+        r_click: PA1<Input<PullUp>>,
+        l_click: PA0<Input<PullUp>>,
+        w_click: PA6<Input<PullUp>>,
+        M1_click: PA4<Input<PullUp>>,
+        M2_click: PA5<Input<PullUp>>,
         scl_plus: PA2<Input<PullUp>>,
         scl_minus: PA3<Input<PullUp>>,
         Scaler: f32, //rtic::Mutex,
@@ -132,7 +136,6 @@ const APP: () = {
         // assert!(clocks.usbclk_valid());
 
         let gpioa = cx.device.GPIOA.split();
-        let led = gpioa.pa5.into_push_pull_output();
 
         // Pull the D+ pin down to send a RESET condition to the USB bus.
         //let mut usb_dp = gpioa.pa12.into_push_pull_output();
@@ -195,7 +198,11 @@ const APP: () = {
             hid,
             usb_dev,
             led: gpioa.pa9.into_push_pull_output(), //split the GPIOA into pins, choose pa5 and convert into push/pull output (this took a while to figure out)
-            btn: gpioa.pa1.into_pull_up_input(),
+            r_click: gpioa.pa1.into_pull_up_input(),
+            l_click: gpioa.pa0.into_pull_up_input(),
+            w_click: gpioa.pa6.into_pull_up_input(),
+            M1_click: gpioa.pa4.into_pull_up_input(),
+            M2_click: gpioa.pa5.into_pull_up_input(),
             scl_plus: gpioa.pa2.into_pull_up_input(),
             scl_minus: gpioa.pa3.into_pull_up_input(),
             Scaler: scaler,
@@ -251,21 +258,30 @@ const APP: () = {
         fn EXTI0();
     }
     
-    #[task(binds=OTG_FS, resources = [led, btn, Scaler, hid, pmw3389, usb_dev], priority = 2)]
+    #[task(binds=OTG_FS, resources = [led, r_click, l_click, w_click, M1_click, M2_click, Scaler, hid, pmw3389, usb_dev], priority = 2)]
     fn toggle(cx: toggle::Context) {
         let myScaler = cx.resources.Scaler;
         let hid = cx.resources.hid;
-        let btn = cx.resources.btn;
+        let r_click = cx.resources.r_click;
+        let l_click = cx.resources.l_click;
+        let w_click = cx.resources.w_click;
+        let M1_click = cx.resources.M1_click;
+        let M2_click = cx.resources.M2_click;
         let usb_dev = cx.resources.usb_dev;
         let mut POS_X: i64 = 0;
         let mut POS_Y: i64 = 0;
-        if btn.is_high().unwrap() {
+        if M1_click.is_high().unwrap() {
+            //if cx.resources.led.is_low().unwrap(){
+               _toggleable_generic(cx.resources.led); //Utilize the generic toggle function, toggle variable no longer needed
+               //}
+        }
+        if M2_click.is_high().unwrap() {
             //if cx.resources.led.is_low().unwrap(){
                _toggleable_generic(cx.resources.led); //Utilize the generic toggle function, toggle variable no longer needed
                //}
         }
         else{
-            if cx.resources.led.is_low().unwrap() && btn.is_low().unwrap() {
+            if cx.resources.led.is_low().unwrap() && r_click.is_low().unwrap() && l_click.is_low().unwrap() {
                 _toggleable_generic(cx.resources.led);
             }
         }
@@ -274,14 +290,16 @@ const APP: () = {
         POS_X += x as i64;
         POS_Y += y as i64;
         let report = MouseReport {
-            buttons: (btn.is_low().unwrap() as u8),
-            x: POS_X as i8,
-            y: POS_Y as i8,
+            buttons: ((M1_click.is_high().unwrap() as u8) << 4
+                | (M2_click.is_high().unwrap() as u8) << 3
+                | (w_click.is_high().unwrap() as u8) << 2
+                | (r_click.is_high().unwrap() as u8) << 1
+                | (l_click.is_high().unwrap() as u8)),
+            x: 0 as i8,
+            y: 0 as i8,
             wheel: 0,
         };
-        //rprintln!("btn: {:?}", btn.is_low().unwrap());
         hid.push_input(&report).ok();
-        //rprintln!("Report {:?}", report);
         
         if usb_dev.poll(&mut [hid]) {
             return;
