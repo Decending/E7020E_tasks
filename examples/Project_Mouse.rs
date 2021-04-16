@@ -155,7 +155,7 @@ const APP: () = {
         };
 	
         USB_BUS.replace(UsbBus::new(usb, EP_MEMORY));
-        let hid = HIDClass::new(USB_BUS.as_ref().unwrap(), MouseReport::desc(), 1);
+        let hid = HIDClass::new(USB_BUS.as_ref().unwrap(), PMouseReport::desc(), 1);
 
 
         let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
@@ -289,14 +289,14 @@ const APP: () = {
         let (x, y) = cx.resources.pmw3389.read_status().unwrap();
         POS_X += x as i64;
         POS_Y += y as i64;
-        let report = MouseReport {
+        let report = PMouseReport {
             buttons: ((M1_click.is_high().unwrap() as u8) << 4
                 | (M2_click.is_high().unwrap() as u8) << 3
                 | (w_click.is_high().unwrap() as u8) << 2
                 | (r_click.is_high().unwrap() as u8) << 1
                 | (l_click.is_high().unwrap() as u8)),
-            x: 0 as i8,
-            y: 0 as i8,
+            x: x as i8,
+            y: y as i8,
             wheel: 0,
         };
         hid.push_input(&report).ok();
